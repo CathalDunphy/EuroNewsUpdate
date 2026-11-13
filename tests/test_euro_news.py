@@ -127,7 +127,7 @@ async def test_workflow_sends_newsletter(temporal_env) -> None:
         return mm.Agent(
             id="agent-1",
             name="euro-news-searcher-test",
-            model="mistral-medium-latest",
+            model="mistral-small-latest",
             version=1,
             versions=[1],
             created_at=now,
@@ -185,7 +185,7 @@ async def test_workflow_dry_run_skips_email(temporal_env) -> None:
         return mm.Agent(
             id="agent-1",
             name="euro-news-searcher-test",
-            model="mistral-medium-latest",
+            model="mistral-small-latest",
             version=1,
             versions=[1],
             created_at=now,

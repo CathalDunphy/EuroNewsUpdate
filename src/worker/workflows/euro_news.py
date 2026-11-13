@@ -41,11 +41,12 @@ def _london_now() -> datetime:
     return utc_naive + offset
 
 
-SEARCH_MODEL = "mistral-medium-latest"
+SEARCH_MODEL = "mistral-small-latest"
 SEARCH_INSTRUCTIONS = """You are a news researcher compiling a European news digest.
 
-For each country you are asked about, use web search to find the most important news stories
-published in the last 24 hours by that country's major domestic news outlets.
+For each country you are asked about, perform EXACTLY ONE web search (for example
+"<Country> top news today") and derive both of its stories from that single search's
+results. Do not run additional searches for the same country.
 
 Rules:
 - Only include stories about or originating in the given country.
