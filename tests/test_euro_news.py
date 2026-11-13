@@ -8,7 +8,6 @@ from mistralai.workflows.plugins.mistralai.models import mistralai_models as mm
 from temporalio.testing import WorkflowEnvironment
 
 import mistralai.workflows as workflows
-from mistralai.workflows.plugins.mistralai.connectors.activities import ResolvedConnector
 from mistralai.workflows.plugins.mistralai.connectors.run_as import RunAs
 from worker.workflows.countries import COUNTRIES, COUNTRY_BATCHES, flag_emoji
 from worker.workflows.euro_news import EuroNewsUpdateWorkflow, parse_batch_stories
@@ -154,11 +153,7 @@ async def test_workflow_sends_newsletter(temporal_env) -> None:
         sent.append({"subject": subject, "html": html, "text": text, "recipients": recipients})
         return '{"id": "msg-1"}'
 
-    @workflows.activity(name="connector_resolve")
-    async def mock_connector_resolve(connector_id_or_name: str, run_as: RunAs = RunAs.AUTO) -> ResolvedConnector:
-        return ResolvedConnector(id="conn-1", name=connector_id_or_name)
-
-    activities = [mock_create_agent, mock_start_conversation, mock_send_newsletter_email, mock_connector_resolve]
+    activities = [mock_create_agent, mock_start_conversation, mock_send_newsletter_email]
 
     async with workflows_testing.create_test_worker(
         temporal_env,
@@ -212,11 +207,7 @@ async def test_workflow_dry_run_skips_email(temporal_env) -> None:
         sent.append({"subject": subject})
         return "ok"
 
-    @workflows.activity(name="connector_resolve")
-    async def mock_connector_resolve(connector_id_or_name: str, run_as: RunAs = RunAs.AUTO) -> ResolvedConnector:
-        return ResolvedConnector(id="conn-1", name=connector_id_or_name)
-
-    activities = [mock_create_agent, mock_start_conversation, mock_send_newsletter_email, mock_connector_resolve]
+    activities = [mock_create_agent, mock_start_conversation, mock_send_newsletter_email]
 
     async with workflows_testing.create_test_worker(
         temporal_env,

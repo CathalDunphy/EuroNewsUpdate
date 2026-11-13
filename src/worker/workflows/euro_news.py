@@ -1,15 +1,16 @@
 import asyncio
 import json
 import logging
+import os
+import smtplib
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 
 from temporalio import workflow
 
 import mistralai.workflows as workflows
 from mistralai.client.models import WebSearchTool
-from mistralai.workflows import Depends
 from mistralai.workflows.plugins.mistralai import Agent, Runner
-from mistralai.workflows.plugins.mistralai.connectors import ToolCallClient, connector, uses_connectors
 
 from worker.workflows.countries import COUNTRIES, COUNTRY_BATCHES, REGION_ORDER, REGIONS, Country
 from worker.workflows.models import (
@@ -59,12 +60,23 @@ Respond with ONLY a JSON object in this exact shape, with no markdown fences or 
 {"countries": [{"country": "<country name>", "stories": [{"headline": "...", "summary": "...", "source": "<outlet name>", "url": "<article url>"}]}]}
 """
 
-gmail_connector = connector(
-    "gmail",
-    run_as="deployment",
-    credentials_name="workspace-gmail",
-    auto_auth=False,
-)
+GMAIL_SMTP_HOST = "smtp.gmail.com"
+GMAIL_SMTP_PORT = 465
+
+
+def _send_via_gmail_smtp(subject: str, html: str, text: str, recipients: list[str]) -> str:
+    sender = os.environ.get("GMAIL_FROM", "cathaldunphy@gmail.com")
+    password = os.environ["GMAIL_APP_PASSWORD"]
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = ", ".join(recipients)
+    message["Subject"] = subject
+    message.set_content(text)
+    message.add_alternative(html, subtype="html")
+    with smtplib.SMTP_SSL(GMAIL_SMTP_HOST, GMAIL_SMTP_PORT) as smtp:
+        smtp.login(sender, password)
+        smtp.send_message(message)
+    return json.dumps({"sent": True, "to": recipients, "from": sender})
 
 
 def _strip_code_fence(text: str) -> str:
@@ -118,20 +130,8 @@ async def send_newsletter_email(
     html: str,
     text: str,
     recipients: list[str],
-    gmail: ToolCallClient = Depends(gmail_connector),
 ) -> str:
-    response = await gmail.call_tool(
-        tool_name="send_email",
-        arguments={
-            "to": recipients,
-            "subject": subject,
-            "htmlBody": html,
-            "body": text,
-        },
-    )
-    if isinstance(response, str):
-        return response
-    return json.dumps(response, default=str)
+    return await asyncio.to_thread(_send_via_gmail_smtp, subject, html, text, recipients)
 
 
 @workflows.workflow.define(
@@ -139,7 +139,6 @@ async def send_newsletter_email(
     workflow_display_name="Europe Update Newsletter",
     workflow_description="Bi-daily newsletter with the top two news stories from every European country.",
 )
-@uses_connectors(gmail_connector)
 class EuroNewsUpdateWorkflow:
     @workflows.workflow.entrypoint
     async def run(self, input: NewsletterInput) -> NewsletterResult:
