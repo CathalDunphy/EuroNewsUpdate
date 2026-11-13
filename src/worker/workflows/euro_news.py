@@ -66,7 +66,7 @@ GMAIL_SMTP_PORT = 465
 
 def _send_via_gmail_smtp(subject: str, html: str, text: str, recipients: list[str]) -> str:
     sender = os.environ.get("GMAIL_FROM", "cathaldunphy@gmail.com")
-    password = os.environ["GMAIL_APP_PASSWORD"]
+    password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ["gmail_app_password"]
     message = EmailMessage()
     message["From"] = sender
     message["To"] = ", ".join(recipients)
